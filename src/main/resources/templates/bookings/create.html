@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${pageTitle != null ? pageTitle : 'Đặt xe'}">Đặt xe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        .car-info img { max-width: 100%; height: auto; border-radius: 0.375rem; }
+        /* Style cho modal (nếu cần thêm) */
+        #confirmationModal .list-group-item {
+            border-left: 0;
+            border-right: 0;
+        }
+        #confirmationModal .list-group-item:first-child {
+            border-top: 0;
+        }
+        #confirmationModal .list-group-item:last-child {
+            border-bottom: 0;
+        }
+        #modalTotalPrice {
+            color: #dc3545; /* Màu đỏ cho tổng tiền */
+        }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main class="container mt-4">
+<!--    {/* Tiêu đề và thông báo lỗi */}-->
+    <h1 class="mb-4" th:text="${pageTitle != null ? pageTitle : 'Đặt xe'}">Đặt xe</h1>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="row g-5">
+<!--        {/* ========== Cột Thông tin xe ========== */}-->
+        <div class="col-md-5 col-lg-4 order-md-last">
+            <h4 class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-primary">Thông tin xe</span>
+            </h4>
+<!--            {/* Dùng thẻ div để dễ lấy thông tin bằng JS sau này */}-->
+            <div id="carInfoCard" th:if="${car}" class="card shadow-sm car-info" th:attr="data-car-name=${car.brand + ' ' + car.model}, data-car-plate=${car.licensePlate}, data-price-per-day=${car.pricePerDay}">
+                <img th:src="${car.imageUrl != null ? car.imageUrl : '/images/default-car.png'}" class="card-img-top p-2" alt="Ảnh xe">
+                <div class="card-body">
+                    <h5 class="card-title" th:text="${car.brand + ' ' + car.model}"></h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between lh-sm">
+                            <div><h6 class="my-0">Biển số</h6></div>
+                            <span class="text-muted" th:text="${car.licensePlate}"></span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between lh-sm">
+                            <div><h6 class="my-0">Giá thuê/ngày</h6></div>
+                            <span class="text-danger fw-bold" th:text="${#numbers.formatDecimal(car.pricePerDay, 0, 'COMMA', 0, 'POINT') + ' VNĐ'}"></span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between lh-sm">
+                            <div><h6 class="my-0">Năm sản xuất</h6></div>
+                            <span class="text-muted" th:text="${car.productionYear}"></span>
+                        </li>
+                    </ul>
+                    <div class="mt-3">
+                        <a th:href="@{/cars/{id}(id=${car.id})}" class="btn btn-sm btn-outline-secondary w-100">
+                            <i class="bi bi-arrow-left-circle"></i> Xem lại chi tiết xe
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!--        {/* ========== Cột Form đặt xe ========== */}-->
+        <div class="col-md-7 col-lg-8">
+            <h4 class="mb-3">Thông tin đặt xe</h4>
+<!--            {/* Bỏ data-price-per-day ở đây vì đã thêm vào #carInfoCard */}-->
+            <form id="bookingForm" th:action="@{/bookings/create}" th:object="${bookingRequest}" method="post" class="needs-validation" novalidate>
+<!--                {/* Hidden input for carId */}-->
+                <input type="hidden" name="carId" id="carId" th:value="${car?.id}" />
+
+                <div class="row g-3">
+<!--                    {/* Customer Info Inputs */}-->
+                    <div class="col-12">
+                        <label for="customerName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="customerName" placeholder="Nguyễn Văn A" th:field="*{customerName}" required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('customerName')}" th:errors="*{customerName}">Vui lòng nhập họ tên.</div>
+                    </div>
+                    <div class="col-12">
+                        <label for="customerEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="customerEmail" placeholder="you@example.com" th:field="*{customerEmail}" required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}">Vui lòng nhập địa chỉ email hợp lệ.</div>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label for="customerPhone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="customerPhone" placeholder="09xxxxxxxx" th:field="*{customerPhone}" required pattern="^\d{10,11}$">
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('customerPhone')}" th:errors="*{customerPhone}">Số điện thoại phải có 10 hoặc 11 chữ số.</div>
+                    </div>
+                    <div class="col-12">
+                        <label for="customerAddress" class="form-label">Địa chỉ</label>
+                        <textarea class="form-control" id="customerAddress" rows="2" th:field="*{customerAddress}"></textarea>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('customerAddress')}" th:errors="*{customerAddress}">Lỗi địa chỉ</div>
+                    </div>
+
+<!--                    {/* Date Inputs */}-->
+                    <div class="col-md-6">
+                        <label for="startDate" class="form-label">Ngày nhận xe <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="startDate" th:field="*{startDate}" required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}">Vui lòng chọn ngày nhận xe hợp lệ.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="endDate" class="form-label">Ngày trả xe <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="endDate" th:field="*{endDate}" required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}">Vui lòng chọn ngày trả xe hợp lệ.</div>
+                    </div>
+
+<!--                    {/* Bỏ phần hiển thị tổng tiền ở đây */}-->
+                </div>
+
+                <hr class="my-4">
+
+                <button class="w-100 btn btn-primary btn-lg" type="submit">
+                    <i class="bi bi-check-circle"></i> Xác nhận đặt xe
+                </button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/footer :: footer}" class="mt-5"></div>
+
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationModalLabel">Xác nhận thông tin Đặt xe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vui lòng kiểm tra lại thông tin đặt xe trước khi xác nhận:</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Khách hàng:</strong> <span id="modalCustomerName"></span></li>
+                    <li class="list-group-item"><strong>Email:</strong> <span id="modalCustomerEmail"></span></li>
+                    <li class="list-group-item"><strong>Số điện thoại:</strong> <span id="modalCustomerPhone"></span></li>
+                    <li class="list-group-item"><strong>Xe:</strong> <span id="modalCarName"></span> (<span id="modalCarLicensePlate"></span>)</li>
+                    <li class="list-group-item"><strong>Ngày nhận:</strong> <span id="modalStartDate"></span></li>
+                    <li class="list-group-item"><strong>Ngày trả:</strong> <span id="modalEndDate"></span></li>
+                    <li class="list-group-item"><strong>Số ngày thuê:</strong> <span id="modalNumberOfDays"></span> ngày</li>
+                    <li class="list-group-item"><strong>Đơn giá/ngày:</strong> <span id="modalPricePerDay"></span> VNĐ</li>
+                    <li class="list-group-item list-group-item-danger">
+                        <strong class="fs-5">Tổng cộng:</strong> <span class="fs-5 fw-bold" id="modalTotalPrice"></span> VNĐ
+                    </li>
+                </ul>
+                <div id="modalErrorMessage" class="text-danger mt-3 small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Đóng
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmBookingButton">
+                    <i class="bi bi-check-lg"></i> Xác nhận & Đặt xe
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!--{/* <<< SCRIPT XỬ LÝ POPUP XÁC NHẬN >>> */}-->
+<script>
+    const bookingForm = document.getElementById('bookingForm'); // Gán ID cho form
+    const confirmationModalElement = document.getElementById('confirmationModal');
+    const confirmBookingButton = document.getElementById('confirmBookingButton');
+    const startDateInput = document.getElementById('startDate'); // Đổi tên biến để tránh trùng lặp
+    const endDateInput = document.getElementById('endDate'); // Đổi tên biến
+    const carInfoCard = document.getElementById('carInfoCard'); // Lấy card thông tin xe bằng ID
+    const modalErrorMessage = document.getElementById('modalErrorMessage'); // Element hiển thị lỗi trong modal
+
+    if (bookingForm && confirmationModalElement && confirmBookingButton && startDateInput && endDateInput && carInfoCard) {
+        const confirmationModal = new bootstrap.Modal(confirmationModalElement); // Khởi tạo Modal
+
+        bookingForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Ngăn form submit ngay lập tức
+            modalErrorMessage.textContent = ''; // Xóa lỗi cũ trong modal
+
+            // Chạy validation của Bootstrap trước
+            if (!bookingForm.checkValidity()) {
+                event.stopPropagation();
+                bookingForm.classList.add('was-validated');
+                console.log("Form validation failed (HTML5).");
+                return; // Dừng lại nếu validation cơ bản thất bại
+            }
+            // Mặc dù checkValidity đã chạy, ta vẫn cần add class để hiển thị lỗi nếu có (trường hợp JS tắt)
+            bookingForm.classList.add('was-validated');
+
+            // Lấy dữ liệu từ form và card thông tin xe
+            const customerName = document.getElementById('customerName')?.value || 'N/A';
+            const customerEmail = document.getElementById('customerEmail')?.value || 'N/A';
+            const customerPhone = document.getElementById('customerPhone')?.value || 'N/A';
+            const carName = carInfoCard.getAttribute('data-car-name') || 'N/A';
+            const carLicensePlate = carInfoCard.getAttribute('data-car-plate') || 'N/A';
+            const pricePerDay = parseFloat(carInfoCard.getAttribute('data-price-per-day')) || 0;
+
+            const startDateStr = startDateInput.value;
+            const endDateStr = endDateInput.value;
+
+            // --- Tính toán số ngày và tổng tiền ---
+            let numberOfDays = 0;
+            let totalPrice = 0;
+            let isValidDates = false;
+            let displayStartDate = startDateStr;
+            let displayEndDate = endDateStr;
+
+            if (startDateStr && endDateStr && !isNaN(pricePerDay) && pricePerDay > 0) {
+                try {
+                    const startDate = new Date(startDateStr);
+                    const endDate = new Date(endDateStr);
+
+                    // Kiểm tra Date object hợp lệ
+                    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                        throw new Error("Ngày không hợp lệ.");
+                    }
+
+                    // Format ngày hiển thị trong modal (dd/MM/yyyy)
+                    const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+                    displayStartDate = startDate.toLocaleDateString('vi-VN', options);
+                    displayEndDate = endDate.toLocaleDateString('vi-VN', options);
+
+                    // Kiểm tra ngày kết thúc >= ngày bắt đầu
+                    if (endDate.getTime() >= startDate.getTime()) {
+                        const oneDay = 24 * 60 * 60 * 1000;
+                        // Làm tròn xuống ngày bắt đầu và kết thúc để tính toán chính xác hơn
+                        const startDayFloor = Math.floor(startDate.getTime() / oneDay);
+                        const endDayFloor = Math.floor(endDate.getTime() / oneDay);
+                        numberOfDays = endDayFloor - startDayFloor + 1;
+
+                        if (numberOfDays > 0) {
+                            totalPrice = numberOfDays * pricePerDay;
+                            isValidDates = true; // Đánh dấu ngày hợp lệ để hiển thị modal
+                        } else {
+                            modalErrorMessage.textContent = 'Số ngày thuê phải lớn hơn 0.';
+                        }
+                    } else {
+                        modalErrorMessage.textContent = 'Ngày trả xe phải sau hoặc bằng ngày nhận xe.';
+                    }
+                } catch(e) {
+                    console.error("Error calculating date/price for modal:", e);
+                    modalErrorMessage.textContent = 'Lỗi: ' + e.message; // Hiển thị lỗi trong modal
+                }
+            } else {
+                modalErrorMessage.textContent = 'Vui lòng chọn ngày nhận, ngày trả và đảm bảo thông tin xe hợp lệ.';
+            }
+            // --- Kết thúc tính toán ---
+
+
+            // Chỉ hiển thị modal nếu ngày hợp lệ và không có lỗi tính toán khác
+            if (isValidDates && modalErrorMessage.textContent === '') {
+                const formattedPricePerDay = pricePerDay.toLocaleString('vi-VN');
+                const formattedTotalPrice = totalPrice.toLocaleString('vi-VN');
+
+                // Điền thông tin vào Modal
+                document.getElementById('modalCustomerName').textContent = customerName;
+                document.getElementById('modalCustomerEmail').textContent = customerEmail;
+                document.getElementById('modalCustomerPhone').textContent = customerPhone;
+                document.getElementById('modalCarName').textContent = carName;
+                document.getElementById('modalCarLicensePlate').textContent = carLicensePlate;
+                document.getElementById('modalStartDate').textContent = displayStartDate;
+                document.getElementById('modalEndDate').textContent = displayEndDate;
+                document.getElementById('modalNumberOfDays').textContent = numberOfDays;
+                document.getElementById('modalPricePerDay').textContent = formattedPricePerDay;
+                document.getElementById('modalTotalPrice').textContent = formattedTotalPrice;
+
+                // Hiển thị modal
+                confirmationModal.show();
+            } else {
+                // Nếu có lỗi (ngày không hợp lệ...), không hiển thị modal
+                // Lỗi đã được hiển thị bởi validation mặc định hoặc trong modalErrorMessage (nếu muốn)
+                console.log("Modal not shown due to invalid dates or price.");
+                // Nếu muốn hiển thị lỗi modalErrorMessage ở ngoài modal thì cần tìm vị trí khác để đặt nó
+            }
+
+        });
+
+        // Xử lý khi nhấn nút xác nhận trên modal
+        confirmBookingButton.addEventListener('click', function() {
+            // Không cần ẩn modal thủ công, Bootstrap tự xử lý khi submit
+            console.log("Confirm button clicked, submitting form...");
+            bookingForm.submit(); // Gửi form đi thực sự
+        });
+
+
+        // --- Logic đặt min date (giữ lại) ---
+        try {
+            const today = new Date();
+            const offset = today.getTimezoneOffset();
+            const todayLocal = new Date(today.getTime() - (offset * 60 * 1000));
+            const todayISO = todayLocal.toISOString().split('T')[0];
+            startDateInput.min = todayISO;
+
+            if (startDateInput.value) {
+                endDateInput.min = startDateInput.value;
+            }
+            startDateInput.addEventListener('change', function() {
+                if (startDateInput.value) {
+                    endDateInput.min = startDateInput.value;
+                    if (endDateInput.value && endDateInput.value < startDateInput.value) {
+                        endDateInput.value = '';
+                    }
+                } else {
+                    endDateInput.min = null;
+                }
+            });
+        } catch (e) {
+            console.error("Error setting min dates:", e);
+        }
+        // --- Hết logic min date ---
+
+    } else {
+        console.error("Could not initialize confirmation modal script. Missing crucial elements.");
+    }
+</script>
+<!--{/* <<< HẾT SCRIPT XỬ LÝ POPUP >>> */}-->
+
+
+<!--{/* Script validation Bootstrap (giữ nguyên) */}-->
+<script>
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    // Validation đã được xử lý trong listener submit ở trên
+                    // Chỉ cần add class nếu validation thất bại
+                    if (!form.checkValidity()) {
+                        // event.preventDefault() // Không cần preventDefault ở đây nữa
+                        // event.stopPropagation()
+                    }
+                    // Class was-validated sẽ được add trong listener kia nếu cần
+                    // form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<body>
+<header th:fragment="header" class="p-3 mb-3 border-bottom bg-light">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+            <a th:href="@{/}" class="d-flex align-items-center mb-2 mb-lg-0 link-body-emphasis text-decoration-none">
+                <i class="bi bi-car-front-fill fs-2 text-primary me-2"></i>
+                <span class="fs-4">Thuê Xe ABC</span>
+            </a>
+
+            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0 ms-lg-4">
+                <li><a th:href="@{/}" class="nav-link px-2 link-secondary">Trang chủ</a></li>
+                <li><a href="#" class="nav-link px-2 link-dark">Giới thiệu</a></li>
+                <li><a href="#" class="nav-link px-2 link-dark">Liên hệ</a></li>
+            </ul>
+        </div>
+    </div>
+</header>
+</body>
+</html>
