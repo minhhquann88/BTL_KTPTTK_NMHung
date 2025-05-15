@@ -1,41 +1,36 @@
 package com.example.BTL_25_4.controller;
 
-import com.example.BTL_25_4.dto.CarDTO;
+import com.example.BTL_25_4.entity.Car;
 import com.example.BTL_25_4.service.CarService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Controller
+@RestController
+@RequestMapping("/api/cars")
 public class HomeController {
 
     private final CarService carService;
-
     @Autowired
     public HomeController(CarService carService) {
         this.carService = carService;
     }
-
-    // Trang chủ hiển thị danh sách xe có sẵn
-    @GetMapping("/")
-    public String homePage(Model model) {
-        List<CarDTO> availableCars = carService.findAllAvailableCars();
-        model.addAttribute("cars", availableCars);
-        model.addAttribute("pageTitle", "Danh sách xe có sẵn");
-        return "home"; // Trả về templates/home.html
+    // Trả về danh sách tất cả các xe đang sẵn có.
+    @GetMapping("/available")
+    public List<Car> getAvailableCars() {
+        return carService.findAllAvailableCars();
     }
-
-    // Tìm kiếm xe
+    // Tìm kiếm xe dựa trên một từ khóa
     @GetMapping("/search")
-    public String searchCars(@RequestParam(value = "keyword", required = false) String keyword, Model model) {
-        List<CarDTO> searchResult = carService.searchAvailableCars(keyword);
-        model.addAttribute("cars", searchResult);
-        model.addAttribute("pageTitle", "Kết quả tìm kiếm");
-        model.addAttribute("keyword", keyword);
-        return "home"; // Sử dụng lại template home
+    public List<Car> searchCars(@RequestParam(value = "keyword", required = false) String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return carService.findAllAvailableCars();
+        } else {
+            return carService.searchAvailableCars(keyword);
+        }
     }
 }

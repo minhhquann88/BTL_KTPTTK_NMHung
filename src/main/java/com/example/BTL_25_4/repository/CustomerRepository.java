@@ -10,22 +10,9 @@ import java.util.Optional;
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
-    // Tìm kiếm khách hàng theo email (hữu ích để kiểm tra trùng lặp)
+    // Tìm kiếm khách hàng theo email
     Optional<Customer> findByEmail(String email);
 
-    // Tìm kiếm khách hàng theo số điện thoại
-    Optional<Customer> findByPhoneNumber(String phoneNumber);
-
-    // THÊM MỚI: Tìm khách hàng theo cả email VÀ số điện thoại
-    Optional<Customer> findByEmailAndPhoneNumber(String email, String phoneNumber);
-
-    // Tìm kiếm gần đúng theo tên (không phân biệt hoa thường)
+    // Tìm kiếm gần đúng theo tên
     List<Customer> findByFullNameContainingIgnoreCase(String name);
-
-    // Tìm kiếm theo email hoặc sđt hoặc tên
-    // Ví dụ sử dụng JPQL Query:
-    // @Query("SELECT c FROM Customer c WHERE LOWER(c.fullName) LIKE LOWER(concat('%', :keyword, '%')) OR c.email LIKE %:keyword% OR c.phoneNumber LIKE %:keyword%")
-    // List<Customer> searchCustomers(@Param("keyword") String keyword);
-
-    // Hoặc dùng Specification nếu cần tìm kiếm phức tạp hơn
 }

@@ -1,27 +1,21 @@
 package com.example.BTL_25_4.controller;
 
-import com.example.BTL_25_4.dto.BookingDTO;
-import com.example.BTL_25_4.dto.BookingRequestDTO;
-import com.example.BTL_25_4.dto.CarDTO;
-import com.example.BTL_25_4.exception.CarNotAvailableException;
-import com.example.BTL_25_4.exception.ResourceNotFoundException;
-import com.example.BTL_25_4.exception.ValidationException;
+import com.example.BTL_25_4.entity.Booking;
+import com.example.BTL_25_4.entity.Car;
 import com.example.BTL_25_4.service.BookingService;
 import com.example.BTL_25_4.service.CarService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-@Controller
+@RestController
 @RequestMapping("/bookings")
 public class BookingController {
-
     private final BookingService bookingService;
     private final CarService carService;
 
@@ -30,56 +24,26 @@ public class BookingController {
         this.bookingService = bookingService;
         this.carService = carService;
     }
-
-    // Hiển thị form tạo booking
-    @GetMapping("/create/{carId}")
-    public String showBookingForm(@PathVariable Long carId, Model model) {
-        Optional<CarDTO> carOptional = carService.findCarById(carId);
-        if (carOptional.isEmpty()) {
-            throw new ResourceNotFoundException("Không tìm thấy xe với ID: " + carId);
+    @GetMapping("/car-info/{carId}")
+    public ResponseEntity<?> getCarInfoForBooking(@PathVariable Long carId) {
+        Optional<Car> carOptional = carService.findCarById(carId);
+        if (carOptional.isPresent()) {
+            return ResponseEntity.ok(carOptional.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy thông tin xe với ID: " + carId));
         }
-        model.addAttribute("car", carOptional.get());
-        model.addAttribute("bookingRequest", new BookingRequestDTO());
-        model.addAttribute("pageTitle", "Đặt xe: " + carOptional.get().getBrand() + " " + carOptional.get().getModel());
-        return "bookings/create";
+    }
+    @PostMapping
+    public ResponseEntity<Booking> processBooking(@RequestBody Booking bookingRequest) {
+        Booking createdBooking = bookingService.createBooking(bookingRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking);
     }
 
-    // Xử lý việc tạo booking
-    @PostMapping("/create")
-    public String processBooking(
-            @Valid @ModelAttribute("bookingRequest") BookingRequestDTO bookingRequest, // DTO chứa cả carId và customer info
-            BindingResult bindingResult,
-            RedirectAttributes redirectAttributes,
-            Model model) {
-
-        // 1. Kiểm tra lỗi validation
-        if (bindingResult.hasErrors()) {
-            Optional<CarDTO> carOptional = carService.findCarById(bookingRequest.getCarId());
-            if (carOptional.isPresent()) {
-                model.addAttribute("car", carOptional.get());
-                model.addAttribute("pageTitle", "Đặt xe: " + carOptional.get().getBrand() + " " + carOptional.get().getModel());
-            } else {
-                redirectAttributes.addFlashAttribute("errorMessage", "Xe bạn đang đặt không còn tồn tại.");
-                return "redirect:/";
-            }
-            model.addAttribute("bookingRequest", bookingRequest);
-            return "bookings/create";
-        }
-
-        // 2. Gọi service để tạo booking (Chỉ cần truyền requestDTO)
-        try {
-            // bookingService giờ chỉ cần requestDTO vì nó chứa cả thông tin khách hàng
-            BookingDTO createdBooking = bookingService.createBooking(bookingRequest);
-            redirectAttributes.addFlashAttribute("successMessage", "Đặt xe thành công! Mã đặt xe của bạn là #" + createdBooking.getId());
-            // Chuyển hướng về trang chủ
-            return "redirect:/";
-
-        } catch (ResourceNotFoundException | CarNotAvailableException | ValidationException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/bookings/create/" + bookingRequest.getCarId();
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Đã xảy ra lỗi trong quá trình đặt xe. Vui lòng thử lại.");
-            return "redirect:/bookings/create/" + bookingRequest.getCarId();
-        }
+    // Endpoint được sửa đổi kiểu trả về
+    @GetMapping("/car/{carId}/booked-dates")
+    public ResponseEntity<List<Map<String, String>>> getBookedDatesForCar(@PathVariable Long carId) {
+        List<Map<String, String>> bookedDateMaps = bookingService.getBookedDateMapsForCar(carId);
+        return ResponseEntity.ok(bookedDateMaps); // Trả về danh sách rỗng nếu không có
     }
 }

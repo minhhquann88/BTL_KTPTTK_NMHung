@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đặt xe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <style>
+    .car-info img { max-width: 100%; height: auto; border-radius: 0.375rem; border: 1px solid #dee2e6; }
+    .loading-spinner-container { display: none; justify-content: center; align-items: center; padding: 40px 0; }
+    .form-label .text-danger { font-size: 1.1em; }
+    #bookedDatesInfoContainer ul li {
+      font-size: 0.9em;
+      color: #6c757d; /* text-muted */
+    }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<main class="container mt-4">
+  <div id="loadingSpinner" class="loading-spinner-container">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Đang tải...</span></div>
+  </div>
+  <div id="globalMessages" class="mb-3"></div>
+  <h1 class="mb-4" id="pageTitle">Đặt xe</h1>
+
+  <div class="row g-5">
+    <div class="col-md-5 col-lg-4 order-md-last">
+      <h4 class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-primary">Thông tin xe</span>
+      </h4>
+      <div id="carInfoCard" class="card shadow-sm car-info mb-3" style="display: none"></div>
+      <div id="carInfoError" class="alert alert-danger" style="display: none">
+        Không thể tải thông tin xe. <a href="/index.html" class="alert-link">Quay lại trang chủ</a>.
+      </div>
+    </div>
+
+    <div class="col-md-7 col-lg-8">
+      <h4 class="mb-3">Thông tin đặt xe</h4>
+      <form id="bookingForm" class="needs-validation" novalidate>
+        <div class="row g-3">
+          <div class="col-12">
+            <label for="customerFullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="customerFullName" placeholder="Nguyễn Văn A" required maxlength="100"/>
+            <div class="invalid-feedback">Vui lòng nhập họ tên (tối đa 100 ký tự).</div>
+          </div>
+          <div class="col-12">
+            <label for="customerEmail" class="form-label">Email <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" id="customerEmail" placeholder="you@example.com" required maxlength="100"/>
+            <div class="invalid-feedback">Vui lòng nhập địa chỉ email hợp lệ (tối đa 100 ký tự).</div>
+          </div>
+          <div class="col-12">
+            <label for="customerPhone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+            <input type="tel" class="form-control" id="customerPhone" placeholder="09xxxxxxxx" required pattern="^\d{10,11}$" maxlength="11"/>
+            <div class="invalid-feedback">Số điện thoại phải có 10 hoặc 11 chữ số.</div>
+          </div>
+          <div class="col-12">
+            <label for="customerAddress" class="form-label">Địa chỉ</label>
+            <textarea class="form-control" id="customerAddress" rows="2" maxlength="500"></textarea>
+            <div class="invalid-feedback">Địa chỉ tối đa 500 ký tự.</div>
+          </div>
+          <div class="col-md-6">
+            <label for="startDate" class="form-label">Ngày nhận xe <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="startDate" required />
+            <div class="invalid-feedback">Vui lòng chọn ngày nhận xe hợp lệ.</div>
+          </div>
+          <div class="col-md-6">
+            <label for="endDate" class="form-label">Ngày trả xe <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="endDate" required />
+            <div class="invalid-feedback">Vui lòng chọn ngày trả xe hợp lệ (phải sau hoặc bằng ngày nhận).</div>
+          </div>
+
+          <div class="col-12 mt-2" id="bookedDatesInfoContainer" style="display: none;">
+            <p class="text-danger mb-1"><small><strong>Lưu ý:</strong> Xe này đã được đặt vào các ngày/khoảng ngày sau:</small></p>
+            <ul id="bookedDatesList" class="list-unstyled ps-3 mb-0">
+            </ul>
+          </div>
+
+          <div class="col-12">
+            <label for="notes" class="form-label">Ghi chú</label>
+            <textarea class="form-control" id="notes" rows="3" placeholder="Yêu cầu thêm (nếu có)..." maxlength="1000"></textarea>
+            <div class="invalid-feedback">Ghi chú tối đa 1000 ký tự.</div>
+          </div>
+        </div>
+
+        <div id="liveTotalPriceSection" class="mt-4 mb-3" style="display: none;">
+          <h4 class="text-danger fw-bold">
+            Tổng cộng (dự kiến): <span id="liveCalculatedTotalPrice">0 VNĐ</span>
+          </h4>
+        </div>
+
+        <hr class="my-4" />
+        <button class="w-100 btn btn-primary btn-lg" type="submit" id="submitBookingBtn" disabled>
+          <i class="bi bi-check-circle"></i> Gửi yêu cầu đặt xe
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<div id="footer-placeholder" class="mt-5"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/common.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const carInfoCard = document.getElementById("carInfoCard");
+    const carInfoError = document.getElementById("carInfoError");
+    const bookingForm = document.getElementById("bookingForm");
+    const pageTitleElement = document.getElementById("pageTitle");
+    const submitBookingBtn = document.getElementById("submitBookingBtn");
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const liveTotalPriceSection = document.getElementById("liveTotalPriceSection");
+    const liveCalculatedTotalPriceElement = document.getElementById("liveCalculatedTotalPrice");
+
+    let currentCarData = null;
+    const urlParams = new URLSearchParams(window.location.search);
+    const carId = urlParams.get("carId");
+
+    function updateAndDisplayTotalPrice() {
+      if (!currentCarData || !currentCarData.pricePerDay || !startDateInput.value || !endDateInput.value) {
+        liveTotalPriceSection.style.display = "none";
+        return;
+      }
+
+      const startDateValue = startDateInput.value;
+      const endDateValue = endDateInput.value;
+      const startDate = new Date(startDateValue);
+      const endDate = new Date(endDateValue);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) {
+        liveTotalPriceSection.style.display = "none";
+        if (endDate < startDate && startDateValue && endDateValue) {
+          endDateInput.classList.add("is-invalid");
+          endDateInput.nextElementSibling.textContent = "Ngày trả xe phải sau hoặc bằng ngày nhận xe.";
+        } else {
+          endDateInput.classList.remove("is-invalid");
+        }
+        return;
+      }
+      endDateInput.classList.remove("is-invalid");
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+
+      const diffTime = Math.max(0, endDate.getTime() - startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      if (diffDays <= 0) {
+        liveTotalPriceSection.style.display = "none";
+        return;
+      }
+
+      const totalPrice = diffDays * currentCarData.pricePerDay;
+      liveCalculatedTotalPriceElement.textContent = formatCurrency(totalPrice);
+      liveTotalPriceSection.style.display = "block";
+    }
+
+    function renderCarInfo(car) {
+      currentCarData = car;
+      const carFullName = `${car.brand || "N/A"} ${car.model || ""}`;
+      document.title = `Đặt xe: ${carFullName}`;
+      pageTitleElement.textContent = `Đặt xe: ${carFullName}`;
+
+      const transmissionDisplay = car.transmissionType || ""; // car.transmissionType is now a String
+      const fuelDisplay = car.fuelType || "";                   // car.fuelType is now a String
+
+      carInfoCard.innerHTML = `
+        <img src="${ car.imageUrl || "/images/placeholder-car.png"}" class="card-img-top p-2" alt="Ảnh xe ${carFullName}" onerror="this.onerror=null;this.src='/images/placeholder-car.png';">
+        <div class="card-body">
+            <h5 class="card-title">${carFullName}</h5>
+            ${car.category ? `<h6 class="card-subtitle mb-2 text-muted">${car.category}</h6>` : ""}
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between lh-sm px-0"><div><h6 class="my-0">Biển số</h6></div><span class="text-muted">${car.licensePlate || "N/A"}</span></li>
+                ${car.numberOfSeats ? `<li class="list-group-item d-flex justify-content-between lh-sm px-0"><div><h6 class="my-0">Số chỗ</h6></div><span class="text-muted">${car.numberOfSeats} chỗ</span></li>` : ""}
+                ${transmissionDisplay ? `<li class="list-group-item d-flex justify-content-between lh-sm px-0"><div><h6 class="my-0">Hộp số</h6></div><span class="text-muted">${transmissionDisplay}</span></li>` : ""}
+                ${fuelDisplay ? `<li class="list-group-item d-flex justify-content-between lh-sm px-0"><div><h6 class="my-0">Nhiên liệu</h6></div><span class="text-muted">${fuelDisplay}</span></li>` : ""}
+                <li class="list-group-item d-flex justify-content-between lh-sm px-0"><div><h6 class="my-0">Giá thuê/ngày</h6></div><span class="text-danger fw-bold">${formatCurrency(car.pricePerDay)}</span></li>
+            </ul>
+            <div class="mt-3">
+                <a href="/cars/details.html?id=${car.id}" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-left-circle"></i> Xem lại chi tiết xe</a>
+            </div>
+        </div>
+      `;
+      carInfoCard.style.display = "block";
+      carInfoError.style.display = "none";
+      submitBookingBtn.disabled = false;
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      startDateInput.min = todayStr;
+      endDateInput.min = startDateInput.value || todayStr;
+
+      startDateInput.addEventListener("change", function () {
+        if (endDateInput.value && endDateInput.value < this.value) {
+          endDateInput.value = this.value;
+        }
+        endDateInput.min = this.value || todayStr;
+        updateAndDisplayTotalPrice();
+      });
+      endDateInput.addEventListener("change", updateAndDisplayTotalPrice);
+      updateAndDisplayTotalPrice();
+    }
+
+    function displayBookedDatesAsText(bookedDateMaps) {
+      const bookedDatesContainer = document.getElementById("bookedDatesInfoContainer");
+      const bookedDatesListUl = document.getElementById("bookedDatesList");
+
+      bookedDatesListUl.innerHTML = "";
+      if (bookedDateMaps && bookedDateMaps.length > 0) {
+        bookedDateMaps.forEach(range => {
+          const listItem = document.createElement("li");
+          // common.js function formatDateForDisplay is expected to handle "YYYY-MM-DD"
+          const startDateDisplay = typeof formatDateForDisplay === 'function' ? formatDateForDisplay(range.startDate) : range.startDate;
+          const endDateDisplay = typeof formatDateForDisplay === 'function' ? formatDateForDisplay(range.endDate) : range.endDate;
+
+          if (range.startDate === range.endDate) {
+            listItem.textContent = `Ngày ${startDateDisplay}`;
+          } else {
+            listItem.textContent = `Từ ngày ${startDateDisplay} đến ngày ${endDateDisplay}`;
+          }
+          bookedDatesListUl.appendChild(listItem);
+        });
+        bookedDatesContainer.style.display = "block";
+      } else {
+        bookedDatesContainer.style.display = "none";
+      }
+    }
+
+    async function fetchAndShowBookedDates(currentCarId) {
+      if (!currentCarId) {
+        displayBookedDatesAsText([]);
+        return;
+      }
+      try {
+        const response = await fetch(`/bookings/car/${currentCarId}/booked-dates`);
+        if (!response.ok) {
+          console.error(`Lỗi tải lịch bận của xe: ${response.status}`);
+          displayBookedDatesAsText([]);
+          return;
+        }
+        const bookedDateMaps = await response.json();
+        displayBookedDatesAsText(bookedDateMaps);
+      } catch (error) {
+        console.error("Lỗi khi tải lịch bận của xe:", error);
+        displayBookedDatesAsText([]);
+      }
+    }
+
+    async function fetchCarInfo() {
+      if (!carId || isNaN(parseInt(carId))) {
+        displayGlobalMessage("ID xe không hợp lệ trong URL. Không thể tiến hành đặt xe.");
+        carInfoError.textContent = "ID xe không hợp lệ. Vui lòng chọn một xe từ trang chủ.";
+        carInfoError.style.display = "block";
+        submitBookingBtn.disabled = true;
+        displayBookedDatesAsText([]);
+        return;
+      }
+      showLoading(true);
+      carInfoCard.style.display = "none";
+      carInfoError.style.display = "none";
+      const apiUrl = `/bookings/car-info/${carId}`;
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          let errorMsg = `Lỗi HTTP: ${response.status} ${response.statusText}`;
+          try { const errorData = await response.json(); errorMsg = errorData?.message || errorMsg; } catch (e) {}
+          throw new Error(errorMsg);
+        }
+        const car = await response.json();
+        if (car && car.id) {
+          renderCarInfo(car);
+          await fetchAndShowBookedDates(carId);
+        } else {
+          throw new Error("Không nhận được dữ liệu xe hợp lệ từ máy chủ.");
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải thông tin xe:", error);
+        displayGlobalMessage("Lỗi tải thông tin xe: " + error.message, "danger");
+        carInfoError.textContent = "Lỗi khi tải thông tin xe: " + error.message;
+        carInfoError.style.display = "block";
+        submitBookingBtn.disabled = true;
+        displayBookedDatesAsText([]);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Hàm gửi dữ liệu booking lên BE
+    async function submitActualBooking(bookingData) {
+      const apiUrl = "/bookings";
+      showLoading(true);
+      submitBookingBtn.disabled = true;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bookingData),
+        });
+        // Even if response is not OK, try to parse it as JSON for error messages
+        const responseData = await response.json().catch(() => ({ message: `Lỗi không xác định hoặc không phải JSON. Mã lỗi: ${response.status}` }));
+
+        if (!response.ok) {
+          let errorMsg = (responseData && responseData.message) ? responseData.message : `Lỗi đặt xe. Mã lỗi: ${response.status}`;
+          if (response.status === 400 && responseData && responseData.errors && typeof responseData.errors === "object") {
+            Object.keys(responseData.errors).forEach(fieldKey => {
+              let inputElement = document.getElementById(fieldKey);
+              if (fieldKey.startsWith("customer.")) {
+                const actualField = fieldKey.substring("customer.".length);
+                inputElement = document.getElementById(`customer${actualField.charAt(0).toUpperCase() + actualField.slice(1)}`);
+              }
+              if (inputElement) {
+                inputElement.classList.add("is-invalid");
+                const feedbackElement = inputElement.nextElementSibling;
+                if (feedbackElement && feedbackElement.classList.contains("invalid-feedback")) {
+                  feedbackElement.textContent = responseData.errors[fieldKey];
+                }
+              }
+            });
+          }
+          displayGlobalMessage("Lỗi khi đặt xe: " + errorMsg, "danger");
+          throw new Error(errorMsg);
+        }
+
+        // Xử lý thành công
+        const createdBooking = responseData;
+        if (createdBooking && createdBooking.id) {
+          displayGlobalMessage("Chúc mừng! Đặt xe thành công. Yêu cầu của bạn đã được gửi đi và đang chờ xử lý.", "success", "globalMessages");
+          const successMessage = {
+            message: "Đặt xe thành công! Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.",
+            type: "success",
+            carInfo: { brand: currentCarData.brand, model: currentCarData.model, startDate: bookingData.startDate, endDate: bookingData.endDate, },
+          };
+          localStorage.setItem("bookingSuccessMessage", JSON.stringify(successMessage));
+          setTimeout(() => { window.location.href = "/index.html"; }, 2000);
+        } else {
+          // Trường hợp response.ok nhưng dữ liệu không như mong đợi
+          displayGlobalMessage("Đặt xe có phản hồi không như mong đợi từ máy chủ.", "warning");
+          throw new Error("Đặt xe thành công nhưng không nhận được thông tin xác nhận đầy đủ.");
+        }
+      } catch (error) {
+        console.error("Lỗi khi đặt xe:", error.message);
+        // Hiển thị lỗi đã được displayGlobalMessage xử lý trong khối try hoặc ở trên
+        // Chỉ cần đảm bảo nút được kích hoạt lại
+        submitBookingBtn.disabled = false;
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    bookingForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      bookingForm.querySelectorAll(".is-invalid").forEach((el) => el.classList.remove("is-invalid"));
+
+      let isValid = true;
+      const inputsToValidate = bookingForm.querySelectorAll("[required], [pattern]");
+      inputsToValidate.forEach((input) => {
+        if (!input.checkValidity()) {
+          input.classList.add("is-invalid");
+          isValid = false;
+        } else {
+          input.classList.remove("is-invalid");
+        }
+      });
+
+      if (endDateInput.value && startDateInput.value && endDateInput.value < startDateInput.value) {
+        endDateInput.classList.add("is-invalid");
+        endDateInput.nextElementSibling.textContent = "Ngày trả xe phải sau hoặc bằng ngày nhận xe.";
+        isValid = false;
+      } else if (endDateInput.value && startDateInput.value) { // Chỉ xóa lỗi nếu cả 2 ngày hợp lệ
+        endDateInput.classList.remove("is-invalid");
+      }
+
+
+      if (!isValid) {
+        displayGlobalMessage("Vui lòng kiểm tra lại các trường thông tin được đánh dấu đỏ.", "warning");
+        return;
+      }
+      if (!currentCarData) {
+        displayGlobalMessage("Thông tin xe chưa được tải hoặc không hợp lệ. Không thể đặt xe.", "warning");
+        return;
+      }
+
+      // Xử lý dữ liệuk booking trước khi gửi lên BE
+      const bookingData = {
+        carIdRequest: parseInt(carId),
+        customer: {
+          fullName: document.getElementById("customerFullName").value.trim(),
+          email: document.getElementById("customerEmail").value.trim(),
+          phoneNumber: document.getElementById("customerPhone").value.trim(),
+          address: document.getElementById("customerAddress").value.trim(),
+        },
+        startDate: startDateInput.value,
+        endDate: endDateInput.value,
+        notes: document.getElementById("notes").value.trim(),
+      };
+      // Gửi lên BE
+      submitActualBooking(bookingData);
+    });
+
+    fetchCarInfo();
+  });
+</script>
+</body>
+</html>
