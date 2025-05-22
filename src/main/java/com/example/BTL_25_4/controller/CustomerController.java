@@ -19,7 +19,7 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    // --- Lấy danh sách khách hàng (có tìm kiếm) ---
+    // Lấy danh sách khách hàng (có tìm kiếm)
     @GetMapping
     public List<Customer> listCustomers(@RequestParam(value = "keyword", required = false) String keyword) {
         if (keyword != null && !keyword.isEmpty()) {
@@ -29,7 +29,7 @@ public class CustomerController {
         }
     }
 
-    // --- Lấy khách hàng theo ID ---
+    // Lấy khách hàng theo ID
     @GetMapping("/{id}")
     public Customer getCustomerById(@PathVariable Long id) {
         Optional<Customer> customerOptional = customerService.findCustomerById(id);
@@ -43,16 +43,16 @@ public class CustomerController {
         return customerService.saveCustomer(customer);
     }
 
-    // --- Cập nhật khách hàng theo ID ---
+    // Cập nhật khách hàng theo ID
     @PutMapping("/{id}")
     public Customer updateCustomer(@PathVariable Long id, @RequestBody Customer customerDetails) {
         return customerService.updateCustomer(id, customerDetails);
     }
 
-    // --- Xóa khách hàng theo ID ---
+    // Xóa khách hàng theo ID
     @DeleteMapping("/{id}")
     public Map<String, String> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
-        return Map.of("message", "Yêu cầu xóa khách hàng ID: " + id + " đã được thực hiện.");
+        return Map.of("message", "Yêu cầu xóa khách hàng đã được thực hiện.");
     }
 }

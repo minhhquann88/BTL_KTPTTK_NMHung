@@ -23,17 +23,15 @@ public class CarController {
         this.carService = carService;
     }
 
+    // Lấy thông tin xe chi tiết
     @GetMapping("/{id:\\d+}")
     public ResponseEntity<?> carDetails(@PathVariable Long id) {
         Optional<Car> carOptional = carService.findCarById(id);
-
         if (carOptional.isPresent()) {
-            // Nếu tìm thấy xe, trả về 200 OK với thông tin xe
             return ResponseEntity.ok(carOptional.get());
         } else {
-            // Nếu không tìm thấy xe, trả về 404 Not Found
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "Không tìm thấy xe với ID: " + id));
+                    .body(Map.of("message", "Không tìm thấy thông tin xe"));
         }
     }
 }

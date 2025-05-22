@@ -106,7 +106,7 @@
 
         async function fetchCustomerDetails() {
             showLoading(true);
-            saveCustomerBtn.disabled = true; // Vô hiệu hóa nút lưu khi đang tải dữ liệu
+            saveCustomerBtn.disabled = true;
             customerForm.style.display = 'none';
             const apiUrl = `/admin/customers/${currentCustomerId}`;
             try {
@@ -127,7 +127,7 @@
                 if (customer && customer.id) {
                     populateForm(customer);
                     customerForm.style.display = 'block';
-                    saveCustomerBtn.disabled = false; // Kích hoạt lại nút lưu sau khi tải xong
+                    saveCustomerBtn.disabled = false;
                 } else if (response.ok && !customer) {
                     throw new Error('Không nhận được dữ liệu khách hàng hợp lệ từ máy chủ (dữ liệu null).');
                 } else {
@@ -185,7 +185,6 @@
             formTitle.textContent = 'Thêm mới Khách hàng';
             registrationDateDiv.style.display = 'none';
             customerForm.style.display = 'block';
-            // Nút lưu ở chế độ thêm mới nên được kích hoạt
             saveCustomerBtn.disabled = false;
         }
 
@@ -246,22 +245,14 @@
                     throw new Error(errorMsg);
                 }
 
-                // Xử lý thành công
                 displayGlobalMessage(isEditMode ? 'Cập nhật thông tin khách hàng thành công!' : 'Thêm mới khách hàng thành công!', 'success', 'globalMessages');
-
-                // Chuyển hướng ngay sau khi báo thành công, không cần chờ lâu
                 window.location.href = '/customers/list.html';
-
-                // Không cần kích hoạt lại nút saveCustomerBtn ở đây vì đã chuyển hướng
 
             } catch (error) {
                 console.error('Lỗi khi lưu khách hàng:', error.message);
                 displayGlobalMessage('Lỗi khi lưu khách hàng: <br>' + error.message, 'danger', 'globalMessages');
                 saveCustomerBtn.disabled = false; // Kích hoạt lại nút LƯU nếu có lỗi
             } finally {
-                // showLoading(false) sẽ được gọi ngay cả khi chuyển hướng,
-                // nhưng vì chuyển hướng xảy ra nhanh, người dùng có thể không thấy.
-                // Điều này là chấp nhận được.
                 showLoading(false);
             }
         });

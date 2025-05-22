@@ -4,7 +4,6 @@ import com.example.BTL_25_4.entity.Customer;
 import com.example.BTL_25_4.repository.CustomerRepository;
 import com.example.BTL_25_4.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,35 +36,24 @@ public class CustomerServiceImpl implements CustomerService {
     public Customer saveCustomer(Customer customer) {
         if (customer.getId() == null) { // Khi tạo mới
             customerRepository.findByEmail(customer.getEmail()).ifPresent(existingCustomer -> {
-                throw new RuntimeException("CONFLICT:Email '" + customer.getEmail() + "' đã tồn tại.");
+                throw new RuntimeException("Email đã tồn tại.");
             });
         }
-        try {
-            return customerRepository.save(customer);
-        } catch (DataIntegrityViolationException e) {
-            String errorMessage = e.getMostSpecificCause().getMessage().toLowerCase();
-            if (errorMessage.contains("email")) { // Chỉ còn kiểm tra email
-                throw new RuntimeException("CONFLICT:Email '" + customer.getEmail() + "' đã được sử dụng.");
-            }
-            throw new RuntimeException("CONFLICT:Lỗi ràng buộc dữ liệu. Vui lòng kiểm tra lại thông tin.");
-        }
+        return customerRepository.save(customer);
     }
 
     @Override
     @Transactional
     public Customer updateCustomer(Long id, Customer customerDetails) {
         Customer existingCustomer = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("NOT_FOUND:Không tìm thấy khách hàng với ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
         // Kiểm tra nếu email thay đổi và bị trùng với người khác
         if (!existingCustomer.getEmail().equalsIgnoreCase(customerDetails.getEmail())) {
             customerRepository.findByEmail(customerDetails.getEmail()).ifPresent(conflictCustomer -> {
-                if (!conflictCustomer.getId().equals(id)) {
-                    throw new RuntimeException("CONFLICT:Email '" + customerDetails.getEmail() + "' đã được sử dụng bởi một khách hàng khác.");
-                }
+                throw new RuntimeException("Email đã được sử dụng bởi một khách hàng khác.");
             });
         }
-
         existingCustomer.setFullName(customerDetails.getFullName());
         existingCustomer.setEmail(customerDetails.getEmail());
         existingCustomer.setPhoneNumber(customerDetails.getPhoneNumber());
@@ -78,13 +66,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional
     public void deleteCustomer(Long id) {
         if (!customerRepository.existsById(id)) {
-            throw new RuntimeException("NOT_FOUND:Không tìm thấy khách hàng với ID: " + id + " để xóa.");
+            throw new RuntimeException("Không tìm thấy khách hàng để xóa.");
         }
-        try {
-            customerRepository.deleteById(id);
-        } catch (DataIntegrityViolationException e) {
-            throw new RuntimeException("CONFLICT:Không thể xóa khách hàng này vì có dữ liệu liên quan (ví dụ: các lượt đặt xe).");
-        }
+        customerRepository.deleteById(id);
     }
 
     @Override
@@ -100,9 +84,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional
     public Customer findOrCreateCustomerForBooking(String name, String email, String phone, String address) {
         if (email == null || email.trim().isEmpty()) {
-            throw new RuntimeException("BAD_REQUEST:Email khách hàng không được để trống khi đặt xe.");
+            throw new RuntimeException("Email khách hàng không được để trống khi đặt xe.");
         }
         Optional<Customer> customerOpt = customerRepository.findByEmail(email);
+        // ktra email vua dien da ton tai chua
+        // roi thi update
         if (customerOpt.isPresent()) {
             Customer existingCustomer = customerOpt.get();
             boolean needsUpdate = false;
@@ -118,15 +104,15 @@ public class CustomerServiceImpl implements CustomerService {
                 existingCustomer.setAddress(address.trim().isEmpty() ? null : address);
                 needsUpdate = true;
             }
-
             if (needsUpdate) {
                 return customerRepository.save(existingCustomer);
             }
             return existingCustomer;
+
+            // chua thi tao moi
         } else {
-            if (name == null || name.trim().isEmpty() ||
-                    phone == null || phone.trim().isEmpty()) {
-                throw new RuntimeException("BAD_REQUEST:Vui lòng cung cấp đủ Họ tên và Số điện thoại cho khách hàng mới.");
+            if (name == null || name.trim().isEmpty() || phone == null || phone.trim().isEmpty()) {
+                throw new RuntimeException("Vui lòng cung cấp đủ thông tin khách hàng mới.");
             }
             Customer newCustomer = new Customer();
             newCustomer.setFullName(name);

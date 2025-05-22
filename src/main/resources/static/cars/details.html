@@ -49,13 +49,12 @@
         const carNotFoundMessage = document.getElementById('carNotFoundMessage');
         const breadcrumbNav = document.getElementById('breadcrumbNav');
         const breadcrumbCarName = document.getElementById('breadcrumbCarName');
-        // Các hàm showLoading, displayGlobalMessage, formatCurrency đã có trong common.js
 
         function renderCarDetails(car) {
             const carFullName = `${car.brand || 'N/A'} ${car.model || ''}`;
             document.title = `Chi tiết xe - ${carFullName}`;
             breadcrumbCarName.textContent = carFullName;
-            breadcrumbNav.style.display = 'block'; // Hiển thị breadcrumb
+            breadcrumbNav.style.display = 'block';
 
             const transmissionDisplay = car.transmissionType || '';
             const fuelDisplay = car.fuelType || '';
@@ -101,32 +100,30 @@
                     </div>
                 </div>
             `;
-            carDetailContainer.style.display = 'block'; // Hiển thị container chi tiết
-            carNotFoundMessage.style.display = 'none'; // Ẩn thông báo lỗi nếu thành công
+            carDetailContainer.style.display = 'block';
+            carNotFoundMessage.style.display = 'none';
         }
 
         async function fetchCarDetails() {
             const urlParams = new URLSearchParams(window.location.search);
             const carId = urlParams.get('id');
 
-            if (!carId || isNaN(parseInt(carId))) { // Kiểm tra carId có hợp lệ không
+            if (!carId || isNaN(parseInt(carId))) {
                 carNotFoundMessage.textContent = 'ID xe không hợp lệ.';
                 carNotFoundMessage.style.display = 'block';
-                breadcrumbNav.style.display = 'none'; // Ẩn breadcrumb nếu ID không hợp lệ
+                breadcrumbNav.style.display = 'none';
                 return;
             }
 
             showLoading(true);
-            carDetailContainer.style.display = 'none'; // Ẩn container chi tiết khi đang tải
-            carNotFoundMessage.style.display = 'none'; // Ẩn thông báo lỗi cũ
+            carDetailContainer.style.display = 'none';
+            carNotFoundMessage.style.display = 'none';
 
-            // API endpoint để lấy chi tiết xe
-            const apiUrl = `/cars/${carId}`; // Backend đã có endpoint này
-
+            // API để lấy chi tiết xe
+            const apiUrl = `/cars/${carId}`;
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) {
-                    // Xử lý lỗi 404 hoặc các lỗi khác
                     if (response.status === 404) {
                         carNotFoundMessage.style.display = 'block';
                     } else {
@@ -134,23 +131,22 @@
                         try {
                             const errorData = await response.json();
                             errorMsg = errorData?.message || errorMsg;
-                        } catch (e) { /* Ignore */ }
+                        } catch (e) { }
                         throw new Error(errorMsg);
                     }
-                    return; // Dừng lại nếu không tìm thấy hoặc lỗi
+                    return;
                 }
 
                 const car = await response.json();
-                if (car && car.id) { // Kiểm tra dữ liệu trả về có hợp lệ không
+                if (car && car.id) {
                     renderCarDetails(car);
                 } else {
-                    // Dữ liệu trả về không hợp lệ hoặc null
                     carNotFoundMessage.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Lỗi khi tải chi tiết xe:', error);
                 displayGlobalMessage('Không thể tải chi tiết xe: ' + error.message);
-                carNotFoundMessage.style.display = 'block'; // Hiển thị thông báo lỗi chung
+                carNotFoundMessage.style.display = 'block';
             } finally {
                 showLoading(false);
             }
